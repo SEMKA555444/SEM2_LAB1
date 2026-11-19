@@ -1,14 +1,14 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2
 
-SRCS = main.cpp \
-       data_structures/Array.cpp \
-       data_structures/OneLinkedList.cpp \
-       data_structures/DoublyLinkedList.cpp \
-       data_structures/Stack.cpp \
-       data_structures/Queue.cpp \
-       data_structures/CompleteBinaryTree.cpp
+HEADERS = data_structures/Array.hpp \
+          data_structures/OneLinkedList.hpp \
+          data_structures/DoublyLinkedList.hpp \
+          data_structures/Stack.hpp \
+          data_structures/Queue.hpp \
+          data_structures/CompleteBinaryTree.hpp
 
+SRCS = main.cpp
 OBJS = $(SRCS:.cpp=.o)
 TARGET = dbms
 
@@ -17,30 +17,212 @@ all: $(TARGET) rust
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
-%.o: %.cpp
+main.o: main.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 rust:
 	cd rust && cargo build --release
-	cp rust/target/release/dbms_rust ./dbms_rust 2>/dev/null || true
+	cp rust/target/release/dbms_rust ./dbms_rust 2>/dev/null || cp rust/target/release/dbms_rust.exe ./dbms_rust.exe 2>/dev/null || true
 
 clean:
 	rm -f $(OBJS) $(TARGET) $(TARGET).exe dbms_rust dbms_rust.exe *.data
 	cd rust 2>/dev/null && cargo clean 2>/dev/null || true
 
 test: $(TARGET)
-	@echo "=== Running C++ Tests ==="
+	@rm -f test.data
+	@echo "=== 1. Array (M) — числа и строки ==="
+	./$(TARGET) --file test.data --query "MPUSH myarr 10"
+	./$(TARGET) --file test.data --query "MPUSH_BACK myarr 3.5"
+	./$(TARGET) --file test.data --query "MPUSH myarr apple"
+	./$(TARGET) --file test.data --query "MPUSH myarr 'hello world'"
+	./$(TARGET) --file test.data --query "MINSERT myarr 1 banana"
+	./$(TARGET) --file test.data --query "MGET myarr 0"
+	./$(TARGET) --file test.data --query "MGET myarr 1"
+	./$(TARGET) --file test.data --query "MGET myarr 4"
+	./$(TARGET) --file test.data --query "MSET myarr 2 42"
+	./$(TARGET) --file test.data --query "MLEN myarr"
+	./$(TARGET) --file test.data --query "MSIZE myarr"
+	./$(TARGET) --file test.data --query "MPRINT myarr"
+	./$(TARGET) --file test.data --query "MDEL myarr 1"
+	./$(TARGET) --file test.data --query "PRINT myarr"
+	@echo "=== 2. Singly Linked List (F) — числа и строки ==="
+	./$(TARGET) --file test.data --query "FPUSH slist 10"
+	./$(TARGET) --file test.data --query "FPUSH_BACK slist 2"
+	./$(TARGET) --file test.data --query "FPUSH_FRONT slist 3.5"
+	./$(TARGET) --file test.data --query "FINSERT_BEFORE slist 1 banana"
+	./$(TARGET) --file test.data --query "FINSERT_FW slist 0 apple"
+	./$(TARGET) --file test.data --query "FINSERT_AFTER slist 2 cherry"
+	./$(TARGET) --file test.data --query "FINSERT_BW slist 3 100"
+	./$(TARGET) --file test.data --query "FGET slist 0"
+	./$(TARGET) --file test.data --query "FGET slist 3"
+	./$(TARGET) --file test.data --query "FSEARCH slist 10.0"
+	./$(TARGET) --file test.data --query "FSEARCH slist cherry"
+	./$(TARGET) --file test.data --query "FLEN slist"
+	./$(TARGET) --file test.data --query "FSIZE slist"
+	./$(TARGET) --file test.data --query "FPRINT slist"
+	./$(TARGET) --file test.data --query "FPRINT_REV slist"
+	./$(TARGET) --file test.data --query "FPRINT_ASC slist"
+	./$(TARGET) --file test.data --query "FPRINT_DESC slist"
+	./$(TARGET) --file test.data --query "FDEL_BEFORE slist 2"
+	./$(TARGET) --file test.data --query "FDEL_FW slist 2"
+	./$(TARGET) --file test.data --query "FDEL_AFTER slist 1"
+	./$(TARGET) --file test.data --query "FDEL_BW slist 0"
+	./$(TARGET) --file test.data --query "FDEL slist 10"
+	./$(TARGET) --file test.data --query "FDEL_VAL slist 2"
+	./$(TARGET) --file test.data --query "FPUSH slist tail1"
+	./$(TARGET) --file test.data --query "FPUSH slist tail2"
+	./$(TARGET) --file test.data --query "FPOP_FRONT slist"
+	./$(TARGET) --file test.data --query "FPOP_BACK slist"
+	./$(TARGET) --file test.data --query "PRINT slist"
+	@echo "=== 3. Doubly Linked List (L) — числа и строки ==="
+	./$(TARGET) --file test.data --query "LPUSH dlist 25"
+	./$(TARGET) --file test.data --query "LPUSH_BACK dlist 4"
+	./$(TARGET) --file test.data --query "LPUSH_FRONT dlist 12.5"
+	./$(TARGET) --file test.data --query "LINSERT_BEFORE dlist 1 beta"
+	./$(TARGET) --file test.data --query "LINSERT_FW dlist 0 alpha"
+	./$(TARGET) --file test.data --query "LINSERT_AFTER dlist 2 gamma"
+	./$(TARGET) --file test.data --query "LINSERT_BW dlist 3 'delta item'"
+	./$(TARGET) --file test.data --query "LGET dlist 0"
+	./$(TARGET) --file test.data --query "LGET dlist 4"
+	./$(TARGET) --file test.data --query "LSEARCH dlist 25"
+	./$(TARGET) --file test.data --query "LSEARCH dlist 'delta item'"
+	./$(TARGET) --file test.data --query "LLEN dlist"
+	./$(TARGET) --file test.data --query "LSIZE dlist"
+	./$(TARGET) --file test.data --query "LPRINT dlist"
+	./$(TARGET) --file test.data --query "LPRINT_REV dlist"
+	./$(TARGET) --file test.data --query "LPRINT_ASC dlist"
+	./$(TARGET) --file test.data --query "LPRINT_DESC dlist"
+	./$(TARGET) --file test.data --query "LDEL_BEFORE dlist 2"
+	./$(TARGET) --file test.data --query "LDEL_FW dlist 2"
+	./$(TARGET) --file test.data --query "LDEL_AFTER dlist 1"
+	./$(TARGET) --file test.data --query "LDEL_BW dlist 0"
+	./$(TARGET) --file test.data --query "LDEL dlist 25"
+	./$(TARGET) --file test.data --query "LDEL_VAL dlist 4"
+	./$(TARGET) --file test.data --query "LPUSH dlist last1"
+	./$(TARGET) --file test.data --query "LPUSH dlist last2"
+	./$(TARGET) --file test.data --query "LPOP_FRONT dlist"
+	./$(TARGET) --file test.data --query "LPOP_BACK dlist"
+	./$(TARGET) --file test.data --query "PRINT dlist"
+	@echo "=== 4. Stack (S) — числа и строки ==="
 	./$(TARGET) --file test.data --query "SPUSH mystack 42"
+	./$(TARGET) --file test.data --query "SPUSH mystack item"
+	./$(TARGET) --file test.data --query "SPUSH mystack 'top string'"
 	./$(TARGET) --file test.data --query "STOP mystack"
+	./$(TARGET) --file test.data --query "SGET mystack"
+	./$(TARGET) --file test.data --query "SSIZE mystack"
+	./$(TARGET) --file test.data --query "SPRINT mystack"
+	./$(TARGET) --file test.data --query "SPOP mystack"
+	./$(TARGET) --file test.data --query "PRINT mystack"
+	@echo "=== 5. Queue (Q) — числа и строки ==="
 	./$(TARGET) --file test.data --query "QPUSH myqueue 100"
+	./$(TARGET) --file test.data --query "QPUSH myqueue element"
+	./$(TARGET) --file test.data --query "QPUSH myqueue 'next item'"
+	./$(TARGET) --file test.data --query "QFRONT myqueue"
+	./$(TARGET) --file test.data --query "QGET myqueue"
+	./$(TARGET) --file test.data --query "QSIZE myqueue"
+	./$(TARGET) --file test.data --query "QPRINT myqueue"
 	./$(TARGET) --file test.data --query "QPOP myqueue"
+	./$(TARGET) --file test.data --query "PRINT myqueue"
+	@echo "=== 6. Complete Binary Tree (T) — числа и строки ==="
 	./$(TARGET) --file test.data --query "TINSERT mytree 10"
 	./$(TARGET) --file test.data --query "TINSERT mytree 20"
+	./$(TARGET) --file test.data --query "TINSERT mytree root_right"
 	./$(TARGET) --file test.data --query "TINSERT mytree 30"
-	./$(TARGET) --file test.data --query "TISCOMPLETE mytree"
+	./$(TARGET) --file test.data --query "TINSERT mytree leaf_str"
 	./$(TARGET) --file test.data --query "ISMEMBER mytree 20"
+	./$(TARGET) --file test.data --query "TSEARCH mytree leaf_str"
+	./$(TARGET) --file test.data --query "TISCOMPLETE mytree"
+	./$(TARGET) --file test.data --query "TCHECK mytree"
+	./$(TARGET) --file test.data --query "TSIZE mytree"
+	./$(TARGET) --file test.data --query "TGET mytree INORDER"
+	./$(TARGET) --file test.data --query "TGET mytree PREORDER"
+	./$(TARGET) --file test.data --query "TGET mytree POSTORDER"
+	./$(TARGET) --file test.data --query "TGET mytree BFS"
+	./$(TARGET) --file test.data --query "TSUCC mytree 20"
+	./$(TARGET) --file test.data --query "TPRED mytree 10"
+	./$(TARGET) --file test.data --query "TPRINT mytree"
+	./$(TARGET) --file test.data --query "TDEL mytree"
+	./$(TARGET) --file test.data --query "TDEL mytree 20"
+	./$(TARGET) --file test.data --query "TISCOMPLETE mytree"
 	./$(TARGET) --file test.data --query "PRINT mytree"
 	@rm -f test.data
-	@echo "=== Tests completed successfully ==="
+	@echo "=== All C++ tests completed successfully ==="
 
-.PHONY: all rust clean test
+test-rust: rust
+	@rm -f test_rust.data
+	@echo "=== Running Rust Tests (all structures, numbers & strings) ==="
+	./dbms_rust --file test_rust.data --query "MPUSH myarr 10"
+	./dbms_rust --file test_rust.data --query "MPUSH myarr 'hello world'"
+	./dbms_rust --file test_rust.data --query "MINSERT myarr 1 banana"
+	./dbms_rust --file test_rust.data --query "MGET myarr 1"
+	./dbms_rust --file test_rust.data --query "MSET myarr 0 42"
+	./dbms_rust --file test_rust.data --query "MLEN myarr"
+	./dbms_rust --file test_rust.data --query "MDEL myarr 1"
+	./dbms_rust --file test_rust.data --query "MPRINT myarr"
+	./dbms_rust --file test_rust.data --query "FPUSH slist 10"
+	./dbms_rust --file test_rust.data --query "FPUSH_FRONT slist 2"
+	./dbms_rust --file test_rust.data --query "FINSERT_BEFORE slist 1 apple"
+	./dbms_rust --file test_rust.data --query "FINSERT_AFTER slist 1 banana"
+	./dbms_rust --file test_rust.data --query "FGET slist 1"
+	./dbms_rust --file test_rust.data --query "FSEARCH slist banana"
+	./dbms_rust --file test_rust.data --query "FLEN slist"
+	./dbms_rust --file test_rust.data --query "FPRINT slist"
+	./dbms_rust --file test_rust.data --query "FPRINT_REV slist"
+	./dbms_rust --file test_rust.data --query "FPRINT_ASC slist"
+	./dbms_rust --file test_rust.data --query "FPRINT_DESC slist"
+	./dbms_rust --file test_rust.data --query "FDEL_BEFORE slist 2"
+	./dbms_rust --file test_rust.data --query "FDEL_AFTER slist 0"
+	./dbms_rust --file test_rust.data --query "FDEL slist 10"
+	./dbms_rust --file test_rust.data --query "FPOP_FRONT slist"
+	./dbms_rust --file test_rust.data --query "FPUSH slist last"
+	./dbms_rust --file test_rust.data --query "FPOP_BACK slist"
+	./dbms_rust --file test_rust.data --query "LPUSH dlist 25"
+	./dbms_rust --file test_rust.data --query "LPUSH_FRONT dlist 4"
+	./dbms_rust --file test_rust.data --query "LINSERT_BEFORE dlist 1 alpha"
+	./dbms_rust --file test_rust.data --query "LINSERT_AFTER dlist 1 beta"
+	./dbms_rust --file test_rust.data --query "LGET dlist 1"
+	./dbms_rust --file test_rust.data --query "LSEARCH dlist beta"
+	./dbms_rust --file test_rust.data --query "LLEN dlist"
+	./dbms_rust --file test_rust.data --query "LPRINT dlist"
+	./dbms_rust --file test_rust.data --query "LPRINT_REV dlist"
+	./dbms_rust --file test_rust.data --query "LPRINT_ASC dlist"
+	./dbms_rust --file test_rust.data --query "LPRINT_DESC dlist"
+	./dbms_rust --file test_rust.data --query "LDEL_BEFORE dlist 2"
+	./dbms_rust --file test_rust.data --query "LDEL_AFTER dlist 0"
+	./dbms_rust --file test_rust.data --query "LDEL dlist 25"
+	./dbms_rust --file test_rust.data --query "LPOP_FRONT dlist"
+	./dbms_rust --file test_rust.data --query "LPUSH dlist tail"
+	./dbms_rust --file test_rust.data --query "LPOP_BACK dlist"
+	./dbms_rust --file test_rust.data --query "SPUSH mystack 42"
+	./dbms_rust --file test_rust.data --query "SPUSH mystack item"
+	./dbms_rust --file test_rust.data --query "STOP mystack"
+	./dbms_rust --file test_rust.data --query "SSIZE mystack"
+	./dbms_rust --file test_rust.data --query "SPRINT mystack"
+	./dbms_rust --file test_rust.data --query "SPOP mystack"
+	./dbms_rust --file test_rust.data --query "QPUSH myqueue 100"
+	./dbms_rust --file test_rust.data --query "QPUSH myqueue element"
+	./dbms_rust --file test_rust.data --query "QFRONT myqueue"
+	./dbms_rust --file test_rust.data --query "QSIZE myqueue"
+	./dbms_rust --file test_rust.data --query "QPRINT myqueue"
+	./dbms_rust --file test_rust.data --query "QPOP myqueue"
+	./dbms_rust --file test_rust.data --query "TINSERT mytree 10"
+	./dbms_rust --file test_rust.data --query "TINSERT mytree 20"
+	./dbms_rust --file test_rust.data --query "TINSERT mytree leaf"
+	./dbms_rust --file test_rust.data --query "ISMEMBER mytree leaf"
+	./dbms_rust --file test_rust.data --query "TISCOMPLETE mytree"
+	./dbms_rust --file test_rust.data --query "TSIZE mytree"
+	./dbms_rust --file test_rust.data --query "TGET mytree INORDER"
+	./dbms_rust --file test_rust.data --query "TGET mytree PREORDER"
+	./dbms_rust --file test_rust.data --query "TGET mytree POSTORDER"
+	./dbms_rust --file test_rust.data --query "TGET mytree BFS"
+	./dbms_rust --file test_rust.data --query "TSUCC mytree 20"
+	./dbms_rust --file test_rust.data --query "TPRED mytree 10"
+	./dbms_rust --file test_rust.data --query "TDEL mytree"
+	./dbms_rust --file test_rust.data --query "TDEL mytree 20"
+	./dbms_rust --file test_rust.data --query "PRINT mytree"
+	@rm -f test_rust.data
+	@echo "=== All Rust tests completed successfully ==="
+
+test-all: test test-rust
+
+.PHONY: all rust clean test test-rust test-all

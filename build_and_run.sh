@@ -8,15 +8,7 @@ echo "[1/3] Компиляция C++ dbms..."
 if command -v make >/dev/null 2>&1; then
     make dbms
 else
-    g++ -std=c++17 -Wall -Wextra -O2 \
-        main.cpp \
-        data_structures/Array.cpp \
-        data_structures/OneLinkedList.cpp \
-        data_structures/DoublyLinkedList.cpp \
-        data_structures/Stack.cpp \
-        data_structures/Queue.cpp \
-        data_structures/CompleteBinaryTree.cpp \
-        -o dbms
+    g++ -std=c++17 -Wall -Wextra -O2 main.cpp -o dbms
 fi
 
 # 2. Сборка Rust СУБД
@@ -31,17 +23,19 @@ fi
 # 3. Демонстрационный запуск
 echo "[3/3] Тестирование C++ версии..."
 ./dbms --file demo.data --query "SPUSH mystack 10"
-./dbms --file demo.data --query "SPUSH mystack 20"
+./dbms --file demo.data --query "SPUSH mystack hello"
 ./dbms --file demo.data --query "SPOP mystack"
 ./dbms --file demo.data --query "QPUSH myqueue 100"
+./dbms --file demo.data --query "QPUSH myqueue element"
 ./dbms --file demo.data --query "QPOP myqueue"
 ./dbms --file demo.data --query "TINSERT mytree 1"
-./dbms --file demo.data --query "TINSERT mytree 2"
-./dbms --file demo.data --query "TINSERT mytree 3"
-./dbms --file demo.data --query "TINSERT mytree 4"
+./dbms --file demo.data --query "TINSERT mytree alpha"
+./dbms --file demo.data --query "TINSERT mytree 3.5"
+./dbms --file demo.data --query "TINSERT mytree beta"
 ./dbms --file demo.data --query "TINSERT mytree 5"
 ./dbms --file demo.data --query "TISCOMPLETE mytree"
-./dbms --file demo.data --query "ISMEMBER mytree 3"
+./dbms --file demo.data --query "ISMEMBER mytree alpha"
+./dbms --file demo.data --query "ISMEMBER mytree 3.5"
 ./dbms --file demo.data --query "PRINT mytree"
 
 if [ -f "./dbms_rust" ]; then

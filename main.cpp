@@ -7,6 +7,7 @@
 #include <queue>
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 
 #include "data_structures/Array.hpp"
 #include "data_structures/OneLinkedList.hpp"
@@ -17,13 +18,81 @@
 
 using namespace std;
 
+struct Value {
+    bool isNumber = false;
+    float number = 0.0f;
+    string text;
+};
+
+bool operator==(const Value& a, const Value& b) {
+    if (a.isNumber != b.isNumber) return false;
+    if (a.isNumber) {
+        return fabs(a.number - b.number) < 1e-6f;
+    }
+    return a.text == b.text;
+}
+
+bool operator!=(const Value& a, const Value& b) {
+    return !(a == b);
+}
+
+bool operator<(const Value& a, const Value& b) {
+    if (a.isNumber && b.isNumber) {
+        return a.number < b.number;
+    }
+    if (!a.isNumber && !b.isNumber) {
+        return a.text < b.text;
+    }
+    return a.isNumber;
+}
+
+bool operator<=(const Value& a, const Value& b) {
+    return !(b < a);
+}
+
+bool operator>(const Value& a, const Value& b) {
+    return b < a;
+}
+
+bool operator>=(const Value& a, const Value& b) {
+    return !(a < b);
+}
+
+ostream& operator<<(ostream& os, const Value& v) {
+    if (v.isNumber) {
+        os << v.number;
+    } else {
+        os << v.text;
+    }
+    return os;
+}
+
+Value parseValue(const string& s) {
+    if (!s.empty()) {
+        char first = s[0];
+        bool looksNumeric = isdigit(static_cast<unsigned char>(first)) || first == '-' || first == '+' || first == '.';
+        bool hasHex = (s.find('x') != string::npos || s.find('X') != string::npos);
+        if (looksNumeric && !hasHex) {
+            try {
+                size_t pos = 0;
+                float num = stof(s, &pos);
+                if (pos == s.size() && isfinite(num)) {
+                    return Value{true, num, ""};
+                }
+            } catch (...) {
+            }
+        }
+    }
+    return Value{false, 0.0f, s};
+}
+
 struct Database {
-    map<string, Array*> arrays;
-    map<string, OneLinkedList*> singleLists;
-    map<string, DoublyLinkedList*> doubleLists;
-    map<string, Stack*> stacks;
-    map<string, Queue*> queues;
-    map<string, CompleteBinaryTree*> trees;
+    map<string, Array<Value>*> arrays;
+    map<string, OneLinkedList<Value>*> singleLists;
+    map<string, DoublyLinkedList<Value>*> doubleLists;
+    map<string, Stack<Value>*> stacks;
+    map<string, Queue<Value>*> queues;
+    map<string, CompleteBinaryTree<Value>*> trees;
 
     ~Database() {
         clearAll();
@@ -67,54 +136,54 @@ struct Database {
         trees.clear();
     }
 
-    Array* getOrCreateArray(const string& name) {
+    Array<Value>* getOrCreateArray(const string& name) {
         if (arrays.find(name) == arrays.end()) {
-            Array* arr = new Array;
+            Array<Value>* arr = new Array<Value>;
             create(arr);
             arrays[name] = arr;
         }
         return arrays[name];
     }
 
-    OneLinkedList* getOrCreateSingleList(const string& name) {
+    OneLinkedList<Value>* getOrCreateSingleList(const string& name) {
         if (singleLists.find(name) == singleLists.end()) {
-            OneLinkedList* list = new OneLinkedList;
+            OneLinkedList<Value>* list = new OneLinkedList<Value>;
             createList(list);
             singleLists[name] = list;
         }
         return singleLists[name];
     }
 
-    DoublyLinkedList* getOrCreateDoubleList(const string& name) {
+    DoublyLinkedList<Value>* getOrCreateDoubleList(const string& name) {
         if (doubleLists.find(name) == doubleLists.end()) {
-            DoublyLinkedList* list = new DoublyLinkedList;
+            DoublyLinkedList<Value>* list = new DoublyLinkedList<Value>;
             createList(list);
             doubleLists[name] = list;
         }
         return doubleLists[name];
     }
 
-    Stack* getOrCreateStack(const string& name) {
+    Stack<Value>* getOrCreateStack(const string& name) {
         if (stacks.find(name) == stacks.end()) {
-            Stack* st = new Stack;
+            Stack<Value>* st = new Stack<Value>;
             init(st);
             stacks[name] = st;
         }
         return stacks[name];
     }
 
-    Queue* getOrCreateQueue(const string& name) {
+    Queue<Value>* getOrCreateQueue(const string& name) {
         if (queues.find(name) == queues.end()) {
-            Queue* q = new Queue;
+            Queue<Value>* q = new Queue<Value>;
             initQueue(q);
             queues[name] = q;
         }
         return queues[name];
     }
 
-    CompleteBinaryTree* getOrCreateTree(const string& name) {
+    CompleteBinaryTree<Value>* getOrCreateTree(const string& name) {
         if (trees.find(name) == trees.end()) {
-            CompleteBinaryTree* tree = new CompleteBinaryTree;
+            CompleteBinaryTree<Value>* tree = new CompleteBinaryTree<Value>;
             initTree(tree);
             trees[name] = tree;
         }
@@ -132,12 +201,83 @@ string toUpper(const string& s) {
 
 vector<string> tokenize(const string& str) {
     vector<string> tokens;
-    istringstream iss(str);
-    string token;
-    while (iss >> token) {
-        tokens.push_back(token);
+    string current;
+    bool inToken = false;
+    bool inQuotes = false;
+    char quoteChar = '\0';
+
+    for (size_t i = 0; i < str.size(); ++i) {
+        char c = str[i];
+        if (inQuotes) {
+            if (c == '\\' && i + 1 < str.size()) {
+                current += str[++i];
+            } else if (c == quoteChar) {
+                inQuotes = false;
+            } else {
+                current += c;
+            }
+        } else {
+            if (isspace(static_cast<unsigned char>(c))) {
+                if (inToken) {
+                    tokens.push_back(current);
+                    current.clear();
+                    inToken = false;
+                }
+            } else if (c == '"' || c == '\'') {
+                inQuotes = true;
+                quoteChar = c;
+                inToken = true;
+            } else {
+                current += c;
+                inToken = true;
+            }
+        }
+    }
+
+    if (inToken) {
+        tokens.push_back(current);
     }
     return tokens;
+}
+
+string formatToken(const string& s) {
+    bool needQuotes = s.empty();
+    for (char c : s) {
+        if (isspace(static_cast<unsigned char>(c)) || c == '"' || c == '\'' || c == '\\') {
+            needQuotes = true;
+            break;
+        }
+    }
+    if (!needQuotes) return s;
+
+    string res = "\"";
+    for (char c : s) {
+        if (c == '"' || c == '\\') {
+            res += '\\';
+        }
+        res += c;
+    }
+    res += "\"";
+    return res;
+}
+
+string formatValue(const Value& v) {
+    if (v.isNumber) {
+        ostringstream oss;
+        oss << v.number;
+        return oss.str();
+    }
+    return formatToken(v.text);
+}
+
+bool parseIndex(const string& s, int& idx) {
+    try {
+        size_t pos = 0;
+        idx = stoi(s, &pos);
+        return pos == s.size();
+    } catch (...) {
+        return false;
+    }
 }
 
 bool loadDatabase(Database& db, const string& filename) {
@@ -157,34 +297,34 @@ bool loadDatabase(Database& db, const string& filename) {
         string name = tokens[1];
 
         if (type == "M" || type == "ARRAY") {
-            Array* arr = db.getOrCreateArray(name);
+            Array<Value>* arr = db.getOrCreateArray(name);
             for (size_t i = 2; i < tokens.size(); ++i) {
-                push_back(arr, stof(tokens[i]));
+                push_back(arr, parseValue(tokens[i]));
             }
         } else if (type == "F" || type == "SLIST") {
-            OneLinkedList* list = db.getOrCreateSingleList(name);
+            OneLinkedList<Value>* list = db.getOrCreateSingleList(name);
             for (size_t i = 2; i < tokens.size(); ++i) {
-                push_back(list, stof(tokens[i]));
+                push_back(list, parseValue(tokens[i]));
             }
         } else if (type == "L" || type == "DLIST") {
-            DoublyLinkedList* list = db.getOrCreateDoubleList(name);
+            DoublyLinkedList<Value>* list = db.getOrCreateDoubleList(name);
             for (size_t i = 2; i < tokens.size(); ++i) {
-                push_back(list, stof(tokens[i]));
+                push_back(list, parseValue(tokens[i]));
             }
         } else if (type == "S" || type == "STACK") {
-            Stack* st = db.getOrCreateStack(name);
+            Stack<Value>* st = db.getOrCreateStack(name);
             for (size_t i = 2; i < tokens.size(); ++i) {
-                push(st, stof(tokens[i]));
+                push(st, parseValue(tokens[i]));
             }
         } else if (type == "Q" || type == "QUEUE") {
-            Queue* q = db.getOrCreateQueue(name);
+            Queue<Value>* q = db.getOrCreateQueue(name);
             for (size_t i = 2; i < tokens.size(); ++i) {
-                push(q, stof(tokens[i]));
+                push(q, parseValue(tokens[i]));
             }
         } else if (type == "T" || type == "TREE") {
-            CompleteBinaryTree* tree = db.getOrCreateTree(name);
+            CompleteBinaryTree<Value>* tree = db.getOrCreateTree(name);
             for (size_t i = 2; i < tokens.size(); ++i) {
-                insert(tree, stof(tokens[i]));
+                insert(tree, parseValue(tokens[i]));
             }
         }
     }
@@ -202,19 +342,19 @@ bool saveDatabase(const Database& db, const string& filename) {
 
     for (const auto& [name, arr] : db.arrays) {
         if (!arr || arr->size == 0) continue;
-        out << "M " << name;
+        out << "M " << formatToken(name);
         for (int i = 0; i < arr->size; ++i) {
-            out << " " << arr->data[i];
+            out << " " << formatValue(arr->data[i]);
         }
         out << "\n";
     }
 
     for (const auto& [name, list] : db.singleLists) {
         if (!list || !list->head) continue;
-        out << "F " << name;
-        SNode* cur = list->head;
+        out << "F " << formatToken(name);
+        SNode<Value>* cur = list->head;
         while (cur) {
-            out << " " << cur->data;
+            out << " " << formatValue(cur->data);
             cur = cur->next;
         }
         out << "\n";
@@ -222,10 +362,10 @@ bool saveDatabase(const Database& db, const string& filename) {
 
     for (const auto& [name, list] : db.doubleLists) {
         if (!list || !list->head) continue;
-        out << "L " << name;
-        DNode* cur = list->head;
+        out << "L " << formatToken(name);
+        DNode<Value>* cur = list->head;
         while (cur) {
-            out << " " << cur->data;
+            out << " " << formatValue(cur->data);
             cur = cur->next;
         }
         out << "\n";
@@ -233,26 +373,26 @@ bool saveDatabase(const Database& db, const string& filename) {
 
     for (const auto& [name, st] : db.stacks) {
         if (!st || isEmpty(st)) continue;
-        vector<float> vals;
-        StackNode* cur = st->top;
+        vector<Value> vals;
+        StackNode<Value>* cur = st->top;
         while (cur) {
             vals.push_back(cur->data);
             cur = cur->next;
         }
         reverse(vals.begin(), vals.end());
-        out << "S " << name;
-        for (float v : vals) {
-            out << " " << v;
+        out << "S " << formatToken(name);
+        for (const Value& v : vals) {
+            out << " " << formatValue(v);
         }
         out << "\n";
     }
 
     for (const auto& [name, q] : db.queues) {
         if (!q || isEmpty(q)) continue;
-        out << "Q " << name;
-        QueueNode* cur = q->head;
+        out << "Q " << formatToken(name);
+        QueueNode<Value>* cur = q->head;
         while (cur) {
-            out << " " << cur->data;
+            out << " " << formatValue(cur->data);
             cur = cur->next;
         }
         out << "\n";
@@ -260,13 +400,13 @@ bool saveDatabase(const Database& db, const string& filename) {
 
     for (const auto& [name, tree] : db.trees) {
         if (!tree || !tree->root) continue;
-        out << "T " << name;
-        queue<TreeNode*> q;
+        out << "T " << formatToken(name);
+        queue<TreeNode<Value>*> q;
         q.push(tree->root);
         while (!q.empty()) {
-            TreeNode* cur = q.front();
+            TreeNode<Value>* cur = q.front();
             q.pop();
-            out << " " << cur->data;
+            out << " " << formatValue(cur->data);
             if (cur->left) q.push(cur->left);
             if (cur->right) q.push(cur->right);
         }
@@ -328,8 +468,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
-        Stack* st = db.getOrCreateStack(name);
+        Value val = parseValue(tokens[2]);
+        Stack<Value>* st = db.getOrCreateStack(name);
         push(st, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -345,8 +485,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             cout << "Stack is empty" << endl;
             return false;
         }
-        Stack* st = db.stacks[name];
-        float val = top(st);
+        Stack<Value>* st = db.stacks[name];
+        Value val = top(st);
         pop(st);
         modified = true;
         cout << "-> " << val << endl;
@@ -395,8 +535,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
-        Queue* q = db.getOrCreateQueue(name);
+        Value val = parseValue(tokens[2]);
+        Queue<Value>* q = db.getOrCreateQueue(name);
         push(q, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -412,8 +552,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             cout << "Queue is empty" << endl;
             return false;
         }
-        Queue* q = db.queues[name];
-        float val = front(q);
+        Queue<Value>* q = db.queues[name];
+        Value val = front(q);
         pop(q);
         modified = true;
         cout << "-> " << val << endl;
@@ -462,8 +602,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
-        Array* arr = db.getOrCreateArray(name);
+        Value val = parseValue(tokens[2]);
+        Array<Value>* arr = db.getOrCreateArray(name);
         push_back(arr, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -475,9 +615,17 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
-        float val = stof(tokens[3]);
-        Array* arr = db.getOrCreateArray(name);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
+        Value val = parseValue(tokens[3]);
+        Array<Value>* arr = db.getOrCreateArray(name);
+        if (idx < 0 || idx > arr->size) {
+            cerr << "Index out of range" << endl;
+            return false;
+        }
         insert(arr, idx, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -489,12 +637,16 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
         if (db.arrays.find(name) == db.arrays.end()) {
             cerr << "Array not found" << endl;
             return false;
         }
-        Array* arr = db.arrays[name];
+        Array<Value>* arr = db.arrays[name];
         if (idx < 0 || idx >= arr->size) {
             cerr << "Index out of range" << endl;
             return false;
@@ -508,12 +660,16 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
         if (db.arrays.find(name) == db.arrays.end()) {
             cerr << "Array not found" << endl;
             return false;
         }
-        Array* arr = db.arrays[name];
+        Array<Value>* arr = db.arrays[name];
         if (idx < 0 || idx >= arr->size) {
             cerr << "Index out of range" << endl;
             return false;
@@ -529,13 +685,21 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
-        float val = stof(tokens[3]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
+        Value val = parseValue(tokens[3]);
         if (db.arrays.find(name) == db.arrays.end()) {
             cerr << "Array not found" << endl;
             return false;
         }
-        Array* arr = db.arrays[name];
+        Array<Value>* arr = db.arrays[name];
+        if (idx < 0 || idx >= arr->size) {
+            cerr << "Index out of range" << endl;
+            return false;
+        }
         change(arr, idx, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -569,8 +733,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
-        OneLinkedList* list = db.getOrCreateSingleList(name);
+        Value val = parseValue(tokens[2]);
+        OneLinkedList<Value>* list = db.getOrCreateSingleList(name);
         push_back(list, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -582,8 +746,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
-        OneLinkedList* list = db.getOrCreateSingleList(name);
+        Value val = parseValue(tokens[2]);
+        OneLinkedList<Value>* list = db.getOrCreateSingleList(name);
         push_front(list, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -595,9 +759,13 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
-        float val = stof(tokens[3]);
-        OneLinkedList* list = db.getOrCreateSingleList(name);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
+        Value val = parseValue(tokens[3]);
+        OneLinkedList<Value>* list = db.getOrCreateSingleList(name);
         insertForward(list, idx, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -609,9 +777,13 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
-        float val = stof(tokens[3]);
-        OneLinkedList* list = db.getOrCreateSingleList(name);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
+        Value val = parseValue(tokens[3]);
+        OneLinkedList<Value>* list = db.getOrCreateSingleList(name);
         insertBackward(list, idx, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -651,7 +823,7 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
+        Value val = parseValue(tokens[2]);
         if (db.singleLists.find(name) != db.singleLists.end()) {
             deletingByValue(db.singleLists[name], val);
             modified = true;
@@ -666,7 +838,11 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
         if (db.singleLists.find(name) != db.singleLists.end()) {
             removeForward(db.singleLists[name], idx);
             modified = true;
@@ -681,7 +857,11 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
         if (db.singleLists.find(name) != db.singleLists.end()) {
             removeBackward(db.singleLists[name], idx);
             modified = true;
@@ -696,9 +876,13 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
         if (db.singleLists.find(name) != db.singleLists.end()) {
-            SNode* n = getAt(db.singleLists[name], idx);
+            SNode<Value>* n = getAt(db.singleLists[name], idx);
             if (n) {
                 cout << "-> " << n->data << endl;
                 return true;
@@ -713,7 +897,7 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
+        Value val = parseValue(tokens[2]);
         if (db.singleLists.find(name) != db.singleLists.end()) {
             searchByValue(db.singleLists[name], val);
             return true;
@@ -781,8 +965,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
-        DoublyLinkedList* list = db.getOrCreateDoubleList(name);
+        Value val = parseValue(tokens[2]);
+        DoublyLinkedList<Value>* list = db.getOrCreateDoubleList(name);
         push_back(list, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -794,8 +978,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
-        DoublyLinkedList* list = db.getOrCreateDoubleList(name);
+        Value val = parseValue(tokens[2]);
+        DoublyLinkedList<Value>* list = db.getOrCreateDoubleList(name);
         push_front(list, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -807,9 +991,13 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
-        float val = stof(tokens[3]);
-        DoublyLinkedList* list = db.getOrCreateDoubleList(name);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
+        Value val = parseValue(tokens[3]);
+        DoublyLinkedList<Value>* list = db.getOrCreateDoubleList(name);
         insertForward(list, idx, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -821,9 +1009,13 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
-        float val = stof(tokens[3]);
-        DoublyLinkedList* list = db.getOrCreateDoubleList(name);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
+        Value val = parseValue(tokens[3]);
+        DoublyLinkedList<Value>* list = db.getOrCreateDoubleList(name);
         insertBackward(list, idx, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -863,7 +1055,7 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
+        Value val = parseValue(tokens[2]);
         if (db.doubleLists.find(name) != db.doubleLists.end()) {
             deletingByValue(db.doubleLists[name], val);
             modified = true;
@@ -878,7 +1070,11 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
         if (db.doubleLists.find(name) != db.doubleLists.end()) {
             removeForward(db.doubleLists[name], idx);
             modified = true;
@@ -893,7 +1089,11 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
         if (db.doubleLists.find(name) != db.doubleLists.end()) {
             removeBackward(db.doubleLists[name], idx);
             modified = true;
@@ -908,9 +1108,13 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        int idx = stoi(tokens[2]);
+        int idx = 0;
+        if (!parseIndex(tokens[2], idx)) {
+            cerr << "Invalid index: " << tokens[2] << endl;
+            return false;
+        }
         if (db.doubleLists.find(name) != db.doubleLists.end()) {
-            DNode* n = getAt(db.doubleLists[name], idx);
+            DNode<Value>* n = getAt(db.doubleLists[name], idx);
             if (n) {
                 cout << "-> " << n->data << endl;
                 return true;
@@ -925,7 +1129,7 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
+        Value val = parseValue(tokens[2]);
         if (db.doubleLists.find(name) != db.doubleLists.end()) {
             searchByValue(db.doubleLists[name], val);
             return true;
@@ -993,8 +1197,8 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
-        CompleteBinaryTree* tree = db.getOrCreateTree(name);
+        Value val = parseValue(tokens[2]);
+        CompleteBinaryTree<Value>* tree = db.getOrCreateTree(name);
         insert(tree, val);
         modified = true;
         cout << "-> " << val << endl;
@@ -1006,7 +1210,7 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
+        Value val = parseValue(tokens[2]);
         if (db.trees.find(name) == db.trees.end()) {
             cout << "-> FALSE" << endl;
             return true;
@@ -1022,7 +1226,7 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
         }
         string name = tokens[1];
         if (db.trees.find(name) == db.trees.end()) {
-            cout << "-> TRUE" << endl; 
+            cout << "-> TRUE" << endl;
             return true;
         }
         bool ok = isComplete(db.trees[name]);
@@ -1045,7 +1249,7 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             cout << (ok ? "-> TRUE" : "-> FALSE") << endl;
             return true;
         } else {
-            float val = stof(tokens[2]);
+            Value val = parseValue(tokens[2]);
             bool res = remove(db.trees[name], val);
             if (res) {
                 modified = true;
@@ -1107,9 +1311,9 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
+        Value val = parseValue(tokens[2]);
         if (db.trees.find(name) != db.trees.end()) {
-            float succ = 0;
+            Value succ;
             if (findSuccessor(db.trees[name], val, succ)) {
                 cout << "-> " << succ << endl;
                 return true;
@@ -1124,9 +1328,9 @@ bool executeQuery(Database& db, const string& queryStr, bool& modified) {
             return false;
         }
         string name = tokens[1];
-        float val = stof(tokens[2]);
+        Value val = parseValue(tokens[2]);
         if (db.trees.find(name) != db.trees.end()) {
-            float pred = 0;
+            Value pred;
             if (findPredecessor(db.trees[name], val, pred)) {
                 cout << "-> " << pred << endl;
                 return true;
