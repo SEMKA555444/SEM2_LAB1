@@ -86,87 +86,6 @@ impl<T> OneLinkedList<T> {
         None
     }
 
-    // Insert before index
-    pub fn insert_forward(&mut self, index: usize, val: T) {
-        if index == 0 {
-            self.push_front(val);
-            return;
-        }
-
-        let mut curr = self.head.as_mut();
-        let mut i = 0;
-        while let Some(node) = curr {
-            if i == index - 1 {
-                let new_node = Box::new(Node {
-                    data: val,
-                    next: node.next.take(),
-                });
-                node.next = Some(new_node);
-                return;
-            }
-            curr = node.next.as_mut();
-            i += 1;
-        }
-    }
-
-    // Insert after index
-    pub fn insert_backward(&mut self, index: usize, val: T) {
-        let mut curr = self.head.as_mut();
-        let mut i = 0;
-        while let Some(node) = curr {
-            if i == index {
-                let new_node = Box::new(Node {
-                    data: val,
-                    next: node.next.take(),
-                });
-                node.next = Some(new_node);
-                return;
-            }
-            curr = node.next.as_mut();
-            i += 1;
-        }
-    }
-
-    // Remove before index
-    pub fn remove_forward(&mut self, index: usize) {
-        if index == 0 {
-            return;
-        }
-        if index == 1 {
-            self.pop_front();
-            return;
-        }
-
-        let mut curr = self.head.as_mut();
-        let mut i = 0;
-        while let Some(node) = curr {
-            if i == index - 2 {
-                if let Some(target) = node.next.take() {
-                    node.next = target.next;
-                }
-                return;
-            }
-            curr = node.next.as_mut();
-            i += 1;
-        }
-    }
-
-    // Remove after index
-    pub fn remove_backward(&mut self, index: usize) {
-        let mut curr = self.head.as_mut();
-        let mut i = 0;
-        while let Some(node) = curr {
-            if i == index {
-                if let Some(target) = node.next.take() {
-                    node.next = target.next;
-                }
-                return;
-            }
-            curr = node.next.as_mut();
-            i += 1;
-        }
-    }
-
     pub fn len(&self) -> usize {
         let mut count = 0;
         let mut curr = self.head.as_ref();
@@ -183,6 +102,87 @@ impl<T> OneLinkedList<T> {
 }
 
 impl<T: PartialEq> OneLinkedList<T> {
+    pub fn insert_forward(&mut self, target_val: &T, val: T) {
+        if self.head.is_none() {
+            return;
+        }
+
+        if &self.head.as_ref().unwrap().data == target_val {
+            self.push_front(val);
+            return;
+        }
+
+        let mut curr = self.head.as_mut().unwrap();
+        while let Some(next_node) = &curr.next {
+            if &next_node.data == target_val {
+                let new_node = Box::new(Node {
+                    data: val,
+                    next: curr.next.take(),
+                });
+                curr.next = Some(new_node);
+                return;
+            }
+            curr = curr.next.as_mut().unwrap();
+        }
+    }
+
+    pub fn insert_backward(&mut self, target_val: &T, val: T) {
+        let mut curr = self.head.as_mut();
+        while let Some(node) = curr {
+            if &node.data == target_val {
+                let new_node = Box::new(Node {
+                    data: val,
+                    next: node.next.take(),
+                });
+                node.next = Some(new_node);
+                return;
+            }
+            curr = node.next.as_mut();
+        }
+    }
+
+    pub fn remove_forward(&mut self, target_val: &T) {
+        if self.head.is_none() || self.head.as_ref().unwrap().next.is_none() {
+            return;
+        }
+
+        if &self.head.as_ref().unwrap().data == target_val {
+            return;
+        }
+
+        if &self.head.as_ref().unwrap().next.as_ref().unwrap().data == target_val {
+            self.pop_front();
+            return;
+        }
+
+        let mut curr = self.head.as_mut().unwrap();
+        while let Some(next_node) = &curr.next {
+            if let Some(after_next) = &next_node.next {
+                if &after_next.data == target_val {
+                    let to_remove = curr.next.take().unwrap();
+                    curr.next = to_remove.next;
+                    return;
+                }
+            } else {
+                break;
+            }
+            curr = curr.next.as_mut().unwrap();
+        }
+    }
+
+    pub fn remove_backward(&mut self, target_val: &T) {
+        let mut curr = self.head.as_mut();
+        while let Some(node) = curr {
+            if &node.data == target_val {
+                if let Some(target) = node.next.take() {
+                    node.next = target.next;
+                }
+                return;
+            }
+            curr = node.next.as_mut();
+        }
+    }
+
     pub fn delete_by_value(&mut self, val: &T) {
         while let Some(node) = &self.head {
             if &node.data == val {

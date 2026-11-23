@@ -20,10 +20,6 @@ impl<T> Stack<T> {
         self.data.push(val);
     }
 
-    pub fn pop(&mut self) -> Option<T> {
-        self.data.pop()
-    }
-
     pub fn top(&self) -> Option<&T> {
         self.data.last()
     }
@@ -41,22 +37,33 @@ impl<T> Stack<T> {
     }
 }
 
-impl<T: Clone> Stack<T> {
-    // Returns elements from bottom to top for serialization
-    pub fn to_vec(&self) -> Vec<T> {
-        self.data.clone()
-    }
-}
-
 impl<T: Display> Stack<T> {
+    pub fn pop(&mut self) -> Option<T> {
+        match self.data.pop() {
+            Some(val) => {
+                println!("-> {}", val);
+                Some(val)
+            }
+            None => {
+                println!("Stack is empty");
+                None
+            }
+        }
+    }
+
     pub fn print(&self) {
         if self.data.is_empty() {
             println!("Stack is empty");
             return;
         }
-        // Stack prints top-to-bottom: 0 is top
         for (i, val) in self.data.iter().rev().enumerate() {
             println!("{} : {}", i, val);
         }
+    }
+}
+
+impl<T: Clone> Stack<T> {
+    pub fn to_vec(&self) -> Vec<T> {
+        self.data.clone()
     }
 }

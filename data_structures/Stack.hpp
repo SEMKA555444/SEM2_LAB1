@@ -36,11 +36,8 @@ bool isEmpty(const Stack<T>* stack) {
 }
 
 template <typename T>
-void pop(Stack<T>* stack) {
-    if (isEmpty(stack)) {
-        std::cout << "Stack is empty" << std::endl;
-        return;
-    }
+void popSilent(Stack<T>* stack) {
+    if (isEmpty(stack)) return;
 
     StackNode<T>* temp = stack->top;
     stack->top = stack->top->next;
@@ -49,9 +46,19 @@ void pop(Stack<T>* stack) {
 }
 
 template <typename T>
+void pop(Stack<T>* stack) {
+    if (isEmpty(stack)) {
+        std::cout << "Stack is empty" << std::endl;
+        return;
+    }
+    std::cout << "-> " << stack->top->data << std::endl;
+    popSilent(stack);
+}
+
+template <typename T>
 void clear(Stack<T>* stack) {
     while (!isEmpty(stack)) {
-        pop(stack);
+        popSilent(stack);
     }
 }
 

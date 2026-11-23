@@ -1,16 +1,17 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::fmt::Display;
 use std::rc::Rc;
 
-pub struct TreeNode<T> {
-    pub data: T,
-    pub left: Option<Rc<RefCell<TreeNode<T>>>>,
-    pub right: Option<Rc<RefCell<TreeNode<T>>>>,
+const EPS: f64 = 1e-9;
+
+pub struct TreeNode {
+    pub data: f64,
+    pub left: Option<Rc<RefCell<TreeNode>>>,
+    pub right: Option<Rc<RefCell<TreeNode>>>,
 }
 
-impl<T> TreeNode<T> {
-    pub fn new(data: T) -> Rc<RefCell<Self>> {
+impl TreeNode {
+    pub fn new(data: f64) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self {
             data,
             left: None,
@@ -19,18 +20,18 @@ impl<T> TreeNode<T> {
     }
 }
 
-pub struct CompleteBinaryTree<T> {
-    pub root: Option<Rc<RefCell<TreeNode<T>>>>,
+pub struct CompleteBinaryTree {
+    pub root: Option<Rc<RefCell<TreeNode>>>,
     pub size: usize,
 }
 
-impl<T> Default for CompleteBinaryTree<T> {
+impl Default for CompleteBinaryTree {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> CompleteBinaryTree<T> {
+impl CompleteBinaryTree {
     pub fn new() -> Self {
         Self {
             root: None,
@@ -51,8 +52,7 @@ impl<T> CompleteBinaryTree<T> {
         self.size = 0;
     }
 
-    // Insert preserving Complete Binary Tree property via BFS
-    pub fn insert(&mut self, val: T) {
+    pub fn insert(&mut self, val: f64) {
         let new_node = TreeNode::new(val);
 
         if self.root.is_none() {
@@ -85,7 +85,6 @@ impl<T> CompleteBinaryTree<T> {
         }
     }
 
-    // Verify whether the tree satisfies Complete Binary Tree definition
     pub fn is_complete(&self) -> bool {
         let root = match &self.root {
             Some(r) => Rc::clone(r),
@@ -119,10 +118,8 @@ impl<T> CompleteBinaryTree<T> {
         }
         true
     }
-}
 
-impl<T: PartialEq> CompleteBinaryTree<T> {
-    pub fn search(&self, val: &T) -> bool {
+    pub fn search(&self, val: f64) -> bool {
         let root = match &self.root {
             Some(r) => Rc::clone(r),
             None => return false,
@@ -133,7 +130,7 @@ impl<T: PartialEq> CompleteBinaryTree<T> {
 
         while let Some(current) = queue.pop_front() {
             let curr = current.borrow();
-            if &curr.data == val {
+            if (curr.data - val).abs() < EPS {
                 return true;
             }
             if let Some(left) = &curr.left {
@@ -145,10 +142,8 @@ impl<T: PartialEq> CompleteBinaryTree<T> {
         }
         false
     }
-}
 
-impl<T: Clone> CompleteBinaryTree<T> {
-    pub fn to_bfs_vec(&self) -> Vec<T> {
+    pub fn to_bfs_vec(&self) -> Vec<f64> {
         let mut res = Vec::new();
         let root = match &self.root {
             Some(r) => Rc::clone(r),
@@ -160,7 +155,7 @@ impl<T: Clone> CompleteBinaryTree<T> {
 
         while let Some(current) = queue.pop_front() {
             let curr = current.borrow();
-            res.push(curr.data.clone());
+            res.push(curr.data);
             if let Some(left) = &curr.left {
                 queue.push_back(Rc::clone(left));
             }
@@ -171,27 +166,23 @@ impl<T: Clone> CompleteBinaryTree<T> {
         res
     }
 
-    fn inorder_helper(node: &Option<Rc<RefCell<TreeNode<T>>>>, res: &mut Vec<T>) {
+    fn inorder_helper(node: &Option<Rc<RefCell<TreeNode>>>, res: &mut Vec<f64>) {
         if let Some(n) = node {
             let curr = n.borrow();
             Self::inorder_helper(&curr.left, res);
-            res.push(curr.data.clone());
+            res.push(curr.data);
             Self::inorder_helper(&curr.right, res);
         }
     }
-}
 
-impl<T: Clone + PartialEq> CompleteBinaryTree<T> {
-    // Remove element while preserving Complete Binary Tree property
-    pub fn remove(&mut self, val: &T) -> bool {
+    pub fn remove(&mut self, val: f64) -> bool {
         let root = match &self.root {
             Some(r) => Rc::clone(r),
             None => return false,
         };
 
-        // If root is only node
         if root.borrow().left.is_none() && root.borrow().right.is_none() {
-            if &root.borrow().data == val {
+            if (root.borrow().data - val).abs() < EPS {
                 self.root = None;
                 self.size = 0;
                 return true;
@@ -200,14 +191,14 @@ impl<T: Clone + PartialEq> CompleteBinaryTree<T> {
         }
 
         let mut queue = VecDeque::new();
-        queue.push_back((root, None::<Rc<RefCell<TreeNode<T>>>>));
+        queue.push_back((root, None::<Rc<RefCell<TreeNode>>>));
 
-        let mut target_node: Option<Rc<RefCell<TreeNode<T>>>> = None;
-        let mut last_node: Option<Rc<RefCell<TreeNode<T>>>> = None;
-        let mut last_parent: Option<Rc<RefCell<TreeNode<T>>>> = None;
+        let mut target_node: Option<Rc<RefCell<TreeNode>>> = None;
+        let mut last_node: Option<Rc<RefCell<TreeNode>>> = None;
+        let mut last_parent: Option<Rc<RefCell<TreeNode>>> = None;
 
         while let Some((curr, parent)) = queue.pop_front() {
-            if &curr.borrow().data == val && target_node.is_none() {
+            if (curr.borrow().data - val).abs() < EPS && target_node.is_none() {
                 target_node = Some(Rc::clone(&curr));
             }
 
@@ -229,7 +220,7 @@ impl<T: Clone + PartialEq> CompleteBinaryTree<T> {
         };
 
         let last = last_node.unwrap();
-        let last_val = last.borrow().data.clone();
+        let last_val = last.borrow().data;
         target.borrow_mut().data = last_val;
 
         if let Some(parent) = last_parent {
@@ -249,13 +240,13 @@ impl<T: Clone + PartialEq> CompleteBinaryTree<T> {
         true
     }
 
-    pub fn find_successor(&self, val: &T) -> Option<T> {
+    pub fn find_successor(&self, val: f64) -> Option<f64> {
         let mut elements = Vec::new();
         Self::inorder_helper(&self.root, &mut elements);
-        for (i, v) in elements.iter().enumerate() {
-            if v == val {
+        for (i, &v) in elements.iter().enumerate() {
+            if (v - val).abs() < EPS {
                 if i + 1 < elements.len() {
-                    return Some(elements[i + 1].clone());
+                    return Some(elements[i + 1]);
                 }
                 return None;
             }
@@ -263,22 +254,20 @@ impl<T: Clone + PartialEq> CompleteBinaryTree<T> {
         None
     }
 
-    pub fn find_predecessor(&self, val: &T) -> Option<T> {
+    pub fn find_predecessor(&self, val: f64) -> Option<f64> {
         let mut elements = Vec::new();
         Self::inorder_helper(&self.root, &mut elements);
-        for (i, v) in elements.iter().enumerate() {
-            if v == val {
+        for (i, &v) in elements.iter().enumerate() {
+            if (v - val).abs() < EPS {
                 if i > 0 {
-                    return Some(elements[i - 1].clone());
+                    return Some(elements[i - 1]);
                 }
                 return None;
             }
         }
         None
     }
-}
 
-impl<T: Clone + Display> CompleteBinaryTree<T> {
     pub fn print_bfs(&self) {
         let vals = self.to_bfs_vec();
         if vals.is_empty() {
@@ -309,10 +298,8 @@ impl<T: Clone + Display> CompleteBinaryTree<T> {
         }
         println!();
     }
-}
 
-impl<T: Display> CompleteBinaryTree<T> {
-    fn preorder_helper(node: &Option<Rc<RefCell<TreeNode<T>>>>) {
+    fn preorder_helper(node: &Option<Rc<RefCell<TreeNode>>>) {
         if let Some(n) = node {
             let curr = n.borrow();
             print!("{} ", curr.data);
@@ -330,7 +317,7 @@ impl<T: Display> CompleteBinaryTree<T> {
         println!();
     }
 
-    fn postorder_helper(node: &Option<Rc<RefCell<TreeNode<T>>>>) {
+    fn postorder_helper(node: &Option<Rc<RefCell<TreeNode>>>) {
         if let Some(n) = node {
             let curr = n.borrow();
             Self::postorder_helper(&curr.left);
@@ -348,7 +335,7 @@ impl<T: Display> CompleteBinaryTree<T> {
         println!();
     }
 
-    fn print_tree_helper(node: &Rc<RefCell<TreeNode<T>>>, prefix: &str, is_left: bool) {
+    fn print_tree_helper(node: &Rc<RefCell<TreeNode>>, prefix: &str, is_left: bool) {
         let curr = node.borrow();
         print!("{}", prefix);
         print!("{}", if is_left { "├── " } else { "└── " });

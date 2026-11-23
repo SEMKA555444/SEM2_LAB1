@@ -23,10 +23,6 @@ impl<T> Queue<T> {
         self.data.push_back(val);
     }
 
-    pub fn pop(&mut self) -> Option<T> {
-        self.data.pop_front()
-    }
-
     pub fn front(&self) -> Option<&T> {
         self.data.front()
     }
@@ -44,13 +40,20 @@ impl<T> Queue<T> {
     }
 }
 
-impl<T: Clone> Queue<T> {
-    pub fn to_vec(&self) -> Vec<T> {
-        self.data.iter().cloned().collect()
-    }
-}
-
 impl<T: Display> Queue<T> {
+    pub fn pop(&mut self) -> Option<T> {
+        match self.data.pop_front() {
+            Some(val) => {
+                println!("-> {}", val);
+                Some(val)
+            }
+            None => {
+                println!("Queue is empty");
+                None
+            }
+        }
+    }
+
     pub fn print(&self) {
         if self.data.is_empty() {
             eprintln!("Queue is empty");
@@ -59,5 +62,11 @@ impl<T: Display> Queue<T> {
         for (i, val) in self.data.iter().enumerate() {
             println!("{} : {}", i, val);
         }
+    }
+}
+
+impl<T: Clone> Queue<T> {
+    pub fn to_vec(&self) -> Vec<T> {
+        self.data.iter().cloned().collect()
     }
 }

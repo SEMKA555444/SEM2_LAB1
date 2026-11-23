@@ -6,53 +6,46 @@
 #include <string>
 #include <utility>
 
-template <typename T>
 struct TreeNode {
-    T data;
-    TreeNode<T>* left;
-    TreeNode<T>* right;
+    double data;
+    TreeNode* left;
+    TreeNode* right;
 };
 
-template <typename T>
 struct CompleteBinaryTree {
-    TreeNode<T>* root;
+    TreeNode* root;
     int size;
 };
 
-template <typename T>
-void destroySubtree(TreeNode<T>* node) {
+inline void destroySubtree(TreeNode* node) {
     if (!node) return;
     destroySubtree(node->left);
     destroySubtree(node->right);
     delete node;
 }
 
-template <typename T>
-void preOrderHelper(TreeNode<T>* node) {
+inline void preOrderHelper(TreeNode* node) {
     if (!node) return;
     std::cout << node->data << " ";
     preOrderHelper(node->left);
     preOrderHelper(node->right);
 }
 
-template <typename T>
-void inOrderHelper(TreeNode<T>* node, std::vector<T>& elements) {
+inline void inOrderHelper(TreeNode* node, std::vector<double>& elements) {
     if (!node) return;
     inOrderHelper(node->left, elements);
     elements.push_back(node->data);
     inOrderHelper(node->right, elements);
 }
 
-template <typename T>
-void postOrderHelper(TreeNode<T>* node) {
+inline void postOrderHelper(TreeNode* node) {
     if (!node) return;
     postOrderHelper(node->left);
     postOrderHelper(node->right);
     std::cout << node->data << " ";
 }
 
-template <typename T>
-void printTreeHelper(TreeNode<T>* node, const std::string& prefix, bool isLeft) {
+inline void printTreeHelper(TreeNode* node, const std::string& prefix, bool isLeft) {
     if (!node) return;
 
     std::cout << prefix;
@@ -70,52 +63,46 @@ void printTreeHelper(TreeNode<T>* node, const std::string& prefix, bool isLeft) 
     }
 }
 
-template <typename T>
-void initTree(CompleteBinaryTree<T>* tree) {
+inline void initTree(CompleteBinaryTree* tree) {
     if (!tree) return;
     tree->root = nullptr;
     tree->size = 0;
 }
 
-template <typename T>
-void destroyTree(CompleteBinaryTree<T>* tree) {
+inline void destroyTree(CompleteBinaryTree* tree) {
     if (!tree) return;
     destroySubtree(tree->root);
     tree->root = nullptr;
     tree->size = 0;
 }
 
-template <typename T>
-void clear(CompleteBinaryTree<T>* tree) {
+inline void clear(CompleteBinaryTree* tree) {
     destroyTree(tree);
 }
 
-template <typename T>
-int size(const CompleteBinaryTree<T>* tree) {
+inline int size(const CompleteBinaryTree* tree) {
     return tree ? tree->size : 0;
 }
 
-template <typename T>
-bool isEmpty(const CompleteBinaryTree<T>* tree) {
+inline bool isEmpty(const CompleteBinaryTree* tree) {
     return !tree || tree->root == nullptr;
 }
 
-template <typename T>
-void insert(CompleteBinaryTree<T>* tree, const T& value) {
+inline void insert(CompleteBinaryTree* tree, double value) {
     if (!tree) return;
 
-    TreeNode<T>* newNode = new TreeNode<T>{value, nullptr, nullptr};
+    TreeNode* newNode = new TreeNode{value, nullptr, nullptr};
     if (tree->root == nullptr) {
         tree->root = newNode;
         tree->size = 1;
         return;
     }
 
-    std::queue<TreeNode<T>*> q;
+    std::queue<TreeNode*> q;
     q.push(tree->root);
 
     while (!q.empty()) {
-        TreeNode<T>* current = q.front();
+        TreeNode* current = q.front();
         q.pop();
 
         if (current->left == nullptr) {
@@ -136,15 +123,14 @@ void insert(CompleteBinaryTree<T>* tree, const T& value) {
     }
 }
 
-template <typename T>
-bool search(const CompleteBinaryTree<T>* tree, const T& value) {
+inline bool search(const CompleteBinaryTree* tree, double value) {
     if (!tree || tree->root == nullptr) return false;
 
-    std::queue<TreeNode<T>*> q;
+    std::queue<TreeNode*> q;
     q.push(tree->root);
 
     while (!q.empty()) {
-        TreeNode<T>* current = q.front();
+        TreeNode* current = q.front();
         q.pop();
 
         if (current->data == value) {
@@ -160,16 +146,15 @@ bool search(const CompleteBinaryTree<T>* tree, const T& value) {
     return false;
 }
 
-template <typename T>
-bool isComplete(const CompleteBinaryTree<T>* tree) {
+inline bool isComplete(const CompleteBinaryTree* tree) {
     if (!tree || tree->root == nullptr) return true;
 
-    std::queue<TreeNode<T>*> q;
+    std::queue<TreeNode*> q;
     q.push(tree->root);
     bool mustBeLeaf = false;
 
     while (!q.empty()) {
-        TreeNode<T>* current = q.front();
+        TreeNode* current = q.front();
         q.pop();
 
         if (current->left != nullptr) {
@@ -190,8 +175,7 @@ bool isComplete(const CompleteBinaryTree<T>* tree) {
     return true;
 }
 
-template <typename T>
-bool remove(CompleteBinaryTree<T>* tree, const T& value) {
+inline bool remove(CompleteBinaryTree* tree, double value) {
     if (!tree || tree->root == nullptr) return false;
 
     if (tree->root->left == nullptr && tree->root->right == nullptr) {
@@ -204,11 +188,11 @@ bool remove(CompleteBinaryTree<T>* tree, const T& value) {
         return false;
     }
 
-    TreeNode<T>* targetNode = nullptr;
-    TreeNode<T>* lastNode = nullptr;
-    TreeNode<T>* lastParent = nullptr;
+    TreeNode* targetNode = nullptr;
+    TreeNode* lastNode = nullptr;
+    TreeNode* lastParent = nullptr;
 
-    std::queue<std::pair<TreeNode<T>*, TreeNode<T>*>> parentQueue;
+    std::queue<std::pair<TreeNode*, TreeNode*>> parentQueue;
     parentQueue.push({tree->root, nullptr});
 
     while (!parentQueue.empty()) {
@@ -249,8 +233,7 @@ bool remove(CompleteBinaryTree<T>* tree, const T& value) {
     return true;
 }
 
-template <typename T>
-void printPreOrder(const CompleteBinaryTree<T>* tree) {
+inline void printPreOrder(const CompleteBinaryTree* tree) {
     if (!tree || !tree->root) {
         std::cout << "(empty tree)" << std::endl;
         return;
@@ -259,13 +242,12 @@ void printPreOrder(const CompleteBinaryTree<T>* tree) {
     std::cout << std::endl;
 }
 
-template <typename T>
-void printInOrder(const CompleteBinaryTree<T>* tree) {
+inline void printInOrder(const CompleteBinaryTree* tree) {
     if (!tree || !tree->root) {
         std::cout << "(empty tree)" << std::endl;
         return;
     }
-    std::vector<T> elements;
+    std::vector<double> elements;
     inOrderHelper(tree->root, elements);
     for (size_t i = 0; i < elements.size(); ++i) {
         std::cout << elements[i] << (i + 1 < elements.size() ? " " : "");
@@ -273,8 +255,7 @@ void printInOrder(const CompleteBinaryTree<T>* tree) {
     std::cout << std::endl;
 }
 
-template <typename T>
-void printPostOrder(const CompleteBinaryTree<T>* tree) {
+inline void printPostOrder(const CompleteBinaryTree* tree) {
     if (!tree || !tree->root) {
         std::cout << "(empty tree)" << std::endl;
         return;
@@ -283,17 +264,16 @@ void printPostOrder(const CompleteBinaryTree<T>* tree) {
     std::cout << std::endl;
 }
 
-template <typename T>
-void printBFS(const CompleteBinaryTree<T>* tree) {
+inline void printBFS(const CompleteBinaryTree* tree) {
     if (!tree || !tree->root) {
         std::cout << "(empty tree)" << std::endl;
         return;
     }
-    std::queue<TreeNode<T>*> q;
+    std::queue<TreeNode*> q;
     q.push(tree->root);
     bool first = true;
     while (!q.empty()) {
-        TreeNode<T>* current = q.front();
+        TreeNode* current = q.front();
         q.pop();
         if (!first) std::cout << " ";
         std::cout << current->data;
@@ -304,8 +284,7 @@ void printBFS(const CompleteBinaryTree<T>* tree) {
     std::cout << std::endl;
 }
 
-template <typename T>
-void printTree(const CompleteBinaryTree<T>* tree) {
+inline void printTree(const CompleteBinaryTree* tree) {
     if (!tree || !tree->root) {
         std::cout << "(empty tree)" << std::endl;
         return;
@@ -321,10 +300,9 @@ void printTree(const CompleteBinaryTree<T>* tree) {
     }
 }
 
-template <typename T>
-bool findSuccessor(const CompleteBinaryTree<T>* tree, const T& value, T& successor) {
+inline bool findSuccessor(const CompleteBinaryTree* tree, double value, double& successor) {
     if (!tree || !tree->root) return false;
-    std::vector<T> elements;
+    std::vector<double> elements;
     inOrderHelper(tree->root, elements);
     for (size_t i = 0; i < elements.size(); ++i) {
         if (elements[i] == value) {
@@ -338,10 +316,9 @@ bool findSuccessor(const CompleteBinaryTree<T>* tree, const T& value, T& success
     return false;
 }
 
-template <typename T>
-bool findPredecessor(const CompleteBinaryTree<T>* tree, const T& value, T& predecessor) {
+inline bool findPredecessor(const CompleteBinaryTree* tree, double value, double& predecessor) {
     if (!tree || !tree->root) return false;
-    std::vector<T> elements;
+    std::vector<double> elements;
     inOrderHelper(tree->root, elements);
     for (size_t i = 0; i < elements.size(); ++i) {
         if (elements[i] == value) {

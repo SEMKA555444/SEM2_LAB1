@@ -130,85 +130,6 @@ impl<T> DoublyLinkedList<T> {
             .map(|idx| &self.nodes[idx].as_ref().unwrap().data)
     }
 
-    // Insert before index
-    pub fn insert_forward(&mut self, index: usize, val: T) {
-        if index == 0 {
-            self.push_front(val);
-            return;
-        }
-        if index >= self.len {
-            return;
-        }
-
-        let target_idx = match self.get_node_idx_at(index) {
-            Some(idx) => idx,
-            None => return,
-        };
-
-        let prev_idx = self.nodes[target_idx].as_ref().unwrap().prev.unwrap();
-        let new_idx = self.alloc_node(val, Some(prev_idx), Some(target_idx));
-
-        self.nodes[prev_idx].as_mut().unwrap().next = Some(new_idx);
-        self.nodes[target_idx].as_mut().unwrap().prev = Some(new_idx);
-        self.len += 1;
-    }
-
-    // Insert after index
-    pub fn insert_backward(&mut self, index: usize, val: T) {
-        if index >= self.len {
-            return;
-        }
-        if index == self.len - 1 {
-            self.push_back(val);
-            return;
-        }
-
-        let target_idx = match self.get_node_idx_at(index) {
-            Some(idx) => idx,
-            None => return,
-        };
-
-        let next_idx = self.nodes[target_idx].as_ref().unwrap().next.unwrap();
-        let new_idx = self.alloc_node(val, Some(target_idx), Some(next_idx));
-
-        self.nodes[target_idx].as_mut().unwrap().next = Some(new_idx);
-        self.nodes[next_idx].as_mut().unwrap().prev = Some(new_idx);
-        self.len += 1;
-    }
-
-    // Remove before index
-    pub fn remove_forward(&mut self, index: usize) {
-        if index == 0 {
-            return;
-        }
-        if index == 1 {
-            self.pop_front();
-            return;
-        }
-        if index >= self.len {
-            return;
-        }
-
-        if let Some(target_idx) = self.get_node_idx_at(index - 1) {
-            self.unlink_and_free(target_idx);
-        }
-    }
-
-    // Remove after index
-    pub fn remove_backward(&mut self, index: usize) {
-        if index + 1 >= self.len {
-            return;
-        }
-        if index + 1 == self.len - 1 {
-            self.pop_back();
-            return;
-        }
-
-        if let Some(target_idx) = self.get_node_idx_at(index + 1) {
-            self.unlink_and_free(target_idx);
-        }
-    }
-
     fn unlink_and_free(&mut self, idx: usize) {
         let prev = self.nodes[idx].as_ref().unwrap().prev;
         let next = self.nodes[idx].as_ref().unwrap().next;
@@ -239,6 +160,78 @@ impl<T> DoublyLinkedList<T> {
 }
 
 impl<T: PartialEq> DoublyLinkedList<T> {
+    fn find_node_idx(&self, val: &T) -> Option<usize> {
+        let mut curr = self.head;
+        while let Some(idx) = curr {
+            let node = self.nodes[idx].as_ref().unwrap();
+            if &node.data == val {
+                return Some(idx);
+            }
+            curr = node.next;
+        }
+        None
+    }
+
+    pub fn insert_forward(&mut self, target_val: &T, val: T) {
+        let target_idx = match self.find_node_idx(target_val) {
+            Some(idx) => idx,
+            None => return,
+        };
+
+        if Some(target_idx) == self.head {
+            self.push_front(val);
+            return;
+        }
+
+        let prev_idx = self.nodes[target_idx].as_ref().unwrap().prev.unwrap();
+        let new_idx = self.alloc_node(val, Some(prev_idx), Some(target_idx));
+
+        self.nodes[prev_idx].as_mut().unwrap().next = Some(new_idx);
+        self.nodes[target_idx].as_mut().unwrap().prev = Some(new_idx);
+        self.len += 1;
+    }
+
+    pub fn insert_backward(&mut self, target_val: &T, val: T) {
+        let target_idx = match self.find_node_idx(target_val) {
+            Some(idx) => idx,
+            None => return,
+        };
+
+        if Some(target_idx) == self.tail {
+            self.push_back(val);
+            return;
+        }
+
+        let next_idx = self.nodes[target_idx].as_ref().unwrap().next.unwrap();
+        let new_idx = self.alloc_node(val, Some(target_idx), Some(next_idx));
+
+        self.nodes[target_idx].as_mut().unwrap().next = Some(new_idx);
+        self.nodes[next_idx].as_mut().unwrap().prev = Some(new_idx);
+        self.len += 1;
+    }
+
+    pub fn remove_forward(&mut self, target_val: &T) {
+        let target_idx = match self.find_node_idx(target_val) {
+            Some(idx) => idx,
+            None => return,
+        };
+
+        if let Some(prev_idx) = self.nodes[target_idx].as_ref().unwrap().prev {
+            self.unlink_and_free(prev_idx);
+        }
+    }
+
+    pub fn remove_backward(&mut self, target_val: &T) {
+        let target_idx = match self.find_node_idx(target_val) {
+            Some(idx) => idx,
+            None => return,
+        };
+
+        if let Some(next_idx) = self.nodes[target_idx].as_ref().unwrap().next {
+            self.unlink_and_free(next_idx);
+        }
+    }
+
     pub fn delete_by_value(&mut self, val: &T) {
         let mut curr = self.head;
         while let Some(idx) = curr {

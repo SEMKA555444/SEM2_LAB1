@@ -77,6 +77,15 @@ impl fmt::Display for Value {
     }
 }
 
+fn parse_f64(s: &str) -> Option<f64> {
+    if let Ok(v) = s.parse::<f64>() {
+        if v.is_finite() {
+            return Some(v);
+        }
+    }
+    None
+}
+
 fn tokenize(s: &str) -> Vec<String> {
     let mut tokens = Vec::new();
     let mut current = String::new();
@@ -144,7 +153,7 @@ pub struct Database {
     double_lists: HashMap<String, DoublyLinkedList<Value>>,
     stacks: HashMap<String, Stack<Value>>,
     queues: HashMap<String, Queue<Value>>,
-    trees: HashMap<String, CompleteBinaryTree<Value>>,
+    trees: HashMap<String, CompleteBinaryTree>,
 }
 
 impl Database {
@@ -209,7 +218,9 @@ impl Database {
                 "T" | "TREE" => {
                     let tree = self.trees.entry(name).or_insert_with(CompleteBinaryTree::new);
                     for tok in &tokens[2..] {
-                        tree.insert(Value::parse(tok));
+                        if let Some(num) = parse_f64(tok) {
+                            tree.insert(num);
+                        }
                     }
                 }
                 _ => {}
@@ -276,7 +287,7 @@ impl Database {
             if tree.is_empty() { continue; }
             write!(file, "T {}", format_token(name))?;
             for val in tree.to_bfs_vec() {
-                write!(file, " {}", val.format_for_file())?;
+                write!(file, " {}", val)?;
             }
             writeln!(file)?;
         }
@@ -292,7 +303,6 @@ impl Database {
 
         let cmd = tokens[0].to_uppercase();
 
-        // Universal PRINT command
         if cmd == "PRINT" {
             if tokens.len() < 2 {
                 eprintln!("Usage: PRINT <name>");
@@ -333,7 +343,6 @@ impl Database {
             return false;
         }
 
-        // Stack commands (S)
         if cmd == "SPUSH" {
             if tokens.len() < 3 {
                 eprintln!("Usage: SPUSH <name> <value>");
@@ -354,11 +363,11 @@ impl Database {
             }
             let name = tokens[1].as_str();
             if let Some(st) = self.stacks.get_mut(name) {
-                if let Some(val) = st.pop() {
+                if st.pop().is_some() {
                     *modified = true;
-                    println!("-> {}", val);
                     return true;
                 }
+                return false;
             }
             println!("Stack is empty");
             return false;
@@ -402,7 +411,6 @@ impl Database {
             return true;
         }
 
-        // Queue commands (Q)
         if cmd == "QPUSH" {
             if tokens.len() < 3 {
                 eprintln!("Usage: QPUSH <name> <value>");
@@ -423,11 +431,11 @@ impl Database {
             }
             let name = tokens[1].as_str();
             if let Some(q) = self.queues.get_mut(name) {
-                if let Some(val) = q.pop() {
+                if q.pop().is_some() {
                     *modified = true;
-                    println!("-> {}", val);
                     return true;
                 }
+                return false;
             }
             println!("Queue is empty");
             return false;
@@ -471,10 +479,9 @@ impl Database {
             return true;
         }
 
-        // Array commands (M)
-        if cmd == "MPUSH" || cmd == "MPUSH_BACK" {
+        if cmd == "MPUSH_BACK" {
             if tokens.len() < 3 {
-                eprintln!("Usage: MPUSH <name> <value>");
+                eprintln!("Usage: MPUSH_BACK <name> <value>");
                 return false;
             }
             let name = tokens[1].clone();
@@ -588,10 +595,9 @@ impl Database {
             return true;
         }
 
-        // Singly Linked List (F)
-        if cmd == "FPUSH" || cmd == "FPUSH_BACK" {
+        if cmd == "FPUSH_BACK" {
             if tokens.len() < 3 {
-                eprintln!("Usage: FPUSH <name> <value>");
+                eprintln!("Usage: FPUSH_BACK <name> <value>");
                 return false;
             }
             let name = tokens[1].clone();
@@ -615,36 +621,30 @@ impl Database {
             println!("-> {}", val);
             return true;
         }
-        if cmd == "FINSERT_BEFORE" || cmd == "FINSERT_FW" {
+        if cmd == "FINSERT_BEFORE" {
             if tokens.len() < 4 {
-                eprintln!("Usage: FINSERT_BEFORE <name> <index> <value>");
+                eprintln!("Usage: FINSERT_BEFORE <name> <target_value> <value>");
                 return false;
             }
             let name = tokens[1].clone();
-            let idx = match tokens[2].parse::<usize>() {
-                Ok(i) => i,
-                Err(_) => { eprintln!("Invalid index: {}", tokens[2]); return false; }
-            };
+            let target_val = Value::parse(&tokens[2]);
             let val = Value::parse(&tokens[3]);
             let list = self.single_lists.entry(name).or_insert_with(OneLinkedList::new);
-            list.insert_forward(idx, val.clone());
+            list.insert_forward(&target_val, val.clone());
             *modified = true;
             println!("-> {}", val);
             return true;
         }
-        if cmd == "FINSERT_AFTER" || cmd == "FINSERT_BW" {
+        if cmd == "FINSERT_AFTER" {
             if tokens.len() < 4 {
-                eprintln!("Usage: FINSERT_AFTER <name> <index> <value>");
+                eprintln!("Usage: FINSERT_AFTER <name> <target_value> <value>");
                 return false;
             }
             let name = tokens[1].clone();
-            let idx = match tokens[2].parse::<usize>() {
-                Ok(i) => i,
-                Err(_) => { eprintln!("Invalid index: {}", tokens[2]); return false; }
-            };
+            let target_val = Value::parse(&tokens[2]);
             let val = Value::parse(&tokens[3]);
             let list = self.single_lists.entry(name).or_insert_with(OneLinkedList::new);
-            list.insert_backward(idx, val.clone());
+            list.insert_backward(&target_val, val.clone());
             *modified = true;
             println!("-> {}", val);
             return true;
@@ -694,36 +694,30 @@ impl Database {
             }
             return false;
         }
-        if cmd == "FDEL_FW" || cmd == "FDEL_BEFORE" {
+        if cmd == "FDEL_BEFORE" {
             if tokens.len() < 3 {
-                eprintln!("Usage: FDEL_BEFORE <name> <index>");
+                eprintln!("Usage: FDEL_BEFORE <name> <target_value>");
                 return false;
             }
             let name = tokens[1].as_str();
-            let idx = match tokens[2].parse::<usize>() {
-                Ok(i) => i,
-                Err(_) => { eprintln!("Invalid index: {}", tokens[2]); return false; }
-            };
+            let target_val = Value::parse(&tokens[2]);
             if let Some(list) = self.single_lists.get_mut(name) {
-                list.remove_forward(idx);
+                list.remove_forward(&target_val);
                 *modified = true;
                 println!("-> OK");
                 return true;
             }
             return false;
         }
-        if cmd == "FDEL_BW" || cmd == "FDEL_AFTER" {
+        if cmd == "FDEL_AFTER" {
             if tokens.len() < 3 {
-                eprintln!("Usage: FDEL_AFTER <name> <index>");
+                eprintln!("Usage: FDEL_AFTER <name> <target_value>");
                 return false;
             }
             let name = tokens[1].as_str();
-            let idx = match tokens[2].parse::<usize>() {
-                Ok(i) => i,
-                Err(_) => { eprintln!("Invalid index: {}", tokens[2]); return false; }
-            };
+            let target_val = Value::parse(&tokens[2]);
             if let Some(list) = self.single_lists.get_mut(name) {
-                list.remove_backward(idx);
+                list.remove_backward(&target_val);
                 *modified = true;
                 println!("-> OK");
                 return true;
@@ -821,10 +815,9 @@ impl Database {
             return true;
         }
 
-        // Doubly Linked List (L)
-        if cmd == "LPUSH" || cmd == "LPUSH_BACK" {
+        if cmd == "LPUSH_BACK" {
             if tokens.len() < 3 {
-                eprintln!("Usage: LPUSH <name> <value>");
+                eprintln!("Usage: LPUSH_BACK <name> <value>");
                 return false;
             }
             let name = tokens[1].clone();
@@ -848,36 +841,30 @@ impl Database {
             println!("-> {}", val);
             return true;
         }
-        if cmd == "LINSERT_BEFORE" || cmd == "LINSERT_FW" {
+        if cmd == "LINSERT_BEFORE" {
             if tokens.len() < 4 {
-                eprintln!("Usage: LINSERT_BEFORE <name> <index> <value>");
+                eprintln!("Usage: LINSERT_BEFORE <name> <target_value> <value>");
                 return false;
             }
             let name = tokens[1].clone();
-            let idx = match tokens[2].parse::<usize>() {
-                Ok(i) => i,
-                Err(_) => { eprintln!("Invalid index: {}", tokens[2]); return false; }
-            };
+            let target_val = Value::parse(&tokens[2]);
             let val = Value::parse(&tokens[3]);
             let list = self.double_lists.entry(name).or_insert_with(DoublyLinkedList::new);
-            list.insert_forward(idx, val.clone());
+            list.insert_forward(&target_val, val.clone());
             *modified = true;
             println!("-> {}", val);
             return true;
         }
-        if cmd == "LINSERT_AFTER" || cmd == "LINSERT_BW" {
+        if cmd == "LINSERT_AFTER" {
             if tokens.len() < 4 {
-                eprintln!("Usage: LINSERT_AFTER <name> <index> <value>");
+                eprintln!("Usage: LINSERT_AFTER <name> <target_value> <value>");
                 return false;
             }
             let name = tokens[1].clone();
-            let idx = match tokens[2].parse::<usize>() {
-                Ok(i) => i,
-                Err(_) => { eprintln!("Invalid index: {}", tokens[2]); return false; }
-            };
+            let target_val = Value::parse(&tokens[2]);
             let val = Value::parse(&tokens[3]);
             let list = self.double_lists.entry(name).or_insert_with(DoublyLinkedList::new);
-            list.insert_backward(idx, val.clone());
+            list.insert_backward(&target_val, val.clone());
             *modified = true;
             println!("-> {}", val);
             return true;
@@ -927,36 +914,30 @@ impl Database {
             }
             return false;
         }
-        if cmd == "LDEL_FW" || cmd == "LDEL_BEFORE" {
+        if cmd == "LDEL_BEFORE" {
             if tokens.len() < 3 {
-                eprintln!("Usage: LDEL_BEFORE <name> <index>");
+                eprintln!("Usage: LDEL_BEFORE <name> <target_value>");
                 return false;
             }
             let name = tokens[1].as_str();
-            let idx = match tokens[2].parse::<usize>() {
-                Ok(i) => i,
-                Err(_) => { eprintln!("Invalid index: {}", tokens[2]); return false; }
-            };
+            let target_val = Value::parse(&tokens[2]);
             if let Some(list) = self.double_lists.get_mut(name) {
-                list.remove_forward(idx);
+                list.remove_forward(&target_val);
                 *modified = true;
                 println!("-> OK");
                 return true;
             }
             return false;
         }
-        if cmd == "LDEL_BW" || cmd == "LDEL_AFTER" {
+        if cmd == "LDEL_AFTER" {
             if tokens.len() < 3 {
-                eprintln!("Usage: LDEL_AFTER <name> <index>");
+                eprintln!("Usage: LDEL_AFTER <name> <target_value>");
                 return false;
             }
             let name = tokens[1].as_str();
-            let idx = match tokens[2].parse::<usize>() {
-                Ok(i) => i,
-                Err(_) => { eprintln!("Invalid index: {}", tokens[2]); return false; }
-            };
+            let target_val = Value::parse(&tokens[2]);
             if let Some(list) = self.double_lists.get_mut(name) {
-                list.remove_backward(idx);
+                list.remove_backward(&target_val);
                 *modified = true;
                 println!("-> OK");
                 return true;
@@ -1054,28 +1035,39 @@ impl Database {
             return true;
         }
 
-        // Complete Binary Tree commands (T)
         if cmd == "TINSERT" {
             if tokens.len() < 3 {
-                eprintln!("Usage: TINSERT <name> <value>");
+                eprintln!("Usage: TINSERT <name> <number>");
                 return false;
             }
             let name = tokens[1].clone();
-            let val = Value::parse(&tokens[2]);
+            let val = match parse_f64(&tokens[2]) {
+                Some(v) => v,
+                None => {
+                    eprintln!("Error: tree supports only numbers");
+                    return false;
+                }
+            };
             let tree = self.trees.entry(name).or_insert_with(CompleteBinaryTree::new);
-            tree.insert(val.clone());
+            tree.insert(val);
             *modified = true;
             println!("-> {}", val);
             return true;
         }
         if cmd == "TSEARCH" || cmd == "ISMEMBER" {
             if tokens.len() < 3 {
-                eprintln!("Usage: ISMEMBER <name> <value>");
+                eprintln!("Usage: ISMEMBER <name> <number>");
                 return false;
             }
             let name = tokens[1].as_str();
-            let val = Value::parse(&tokens[2]);
-            let found = self.trees.get(name).map(|t| t.search(&val)).unwrap_or(false);
+            let val = match parse_f64(&tokens[2]) {
+                Some(v) => v,
+                None => {
+                    println!("-> FALSE");
+                    return true;
+                }
+            };
+            let found = self.trees.get(name).map(|t| t.search(val)).unwrap_or(false);
             println!("{}", if found { "-> TRUE" } else { "-> FALSE" });
             return true;
         }
@@ -1091,19 +1083,24 @@ impl Database {
         }
         if cmd == "TDEL" {
             if tokens.len() < 2 {
-                eprintln!("Usage: TDEL <name> [value]");
+                eprintln!("Usage: TDEL <name> [number]");
                 return false;
             }
             let name = tokens[1].as_str();
             if tokens.len() == 2 {
-                // Per variant requirement: TDEL checks complete tree
                 let ok = self.trees.get(name).map(|t| t.is_complete()).unwrap_or(true);
                 println!("{}", if ok { "-> TRUE" } else { "-> FALSE" });
                 return true;
             } else {
-                let val = Value::parse(&tokens[2]);
+                let val = match parse_f64(&tokens[2]) {
+                    Some(v) => v,
+                    None => {
+                        eprintln!("Error: tree supports only numbers");
+                        return false;
+                    }
+                };
                 if let Some(tree) = self.trees.get_mut(name) {
-                    if tree.remove(&val) {
+                    if tree.remove(val) {
                         *modified = true;
                         println!("-> OK");
                         return true;
@@ -1160,13 +1157,19 @@ impl Database {
         }
         if cmd == "TSUCC" {
             if tokens.len() < 3 {
-                eprintln!("Usage: TSUCC <name> <value>");
+                eprintln!("Usage: TSUCC <name> <number>");
                 return false;
             }
             let name = tokens[1].as_str();
-            let val = Value::parse(&tokens[2]);
+            let val = match parse_f64(&tokens[2]) {
+                Some(v) => v,
+                None => {
+                    eprintln!("Error: tree supports only numbers");
+                    return false;
+                }
+            };
             if let Some(tree) = self.trees.get(name) {
-                if let Some(succ) = tree.find_successor(&val) {
+                if let Some(succ) = tree.find_successor(val) {
                     println!("-> {}", succ);
                     return true;
                 }
@@ -1176,13 +1179,19 @@ impl Database {
         }
         if cmd == "TPRED" {
             if tokens.len() < 3 {
-                eprintln!("Usage: TPRED <name> <value>");
+                eprintln!("Usage: TPRED <name> <number>");
                 return false;
             }
             let name = tokens[1].as_str();
-            let val = Value::parse(&tokens[2]);
+            let val = match parse_f64(&tokens[2]) {
+                Some(v) => v,
+                None => {
+                    eprintln!("Error: tree supports only numbers");
+                    return false;
+                }
+            };
             if let Some(tree) = self.trees.get(name) {
-                if let Some(pred) = tree.find_predecessor(&val) {
+                if let Some(pred) = tree.find_predecessor(val) {
                     println!("-> {}", pred);
                     return true;
                 }
@@ -1231,7 +1240,6 @@ fn main() {
         std::process::exit(if ok { 0 } else { 1 });
     }
 
-    // Interactive mode
     println!("=== Simple DBMS CLI (Rust) ===");
     println!("Loaded database file: {}", filename);
     println!("Type queries or 'EXIT' / 'QUIT' to leave.");

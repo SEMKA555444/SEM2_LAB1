@@ -43,11 +43,8 @@ void push(Queue<T>* queue, const T& value) {
 }
 
 template <typename T>
-void pop(Queue<T>* queue) {
-    if (isEmpty(queue)) {
-        std::cout << "Queue is empty" << std::endl;
-        return;
-    }
+void popSilent(Queue<T>* queue) {
+    if (isEmpty(queue)) return;
     QueueNode<T>* temp = queue->head;
     queue->head = queue->head->next;
     queue->size -= 1;
@@ -57,6 +54,16 @@ void pop(Queue<T>* queue) {
         queue->size = 0;
     }
     delete temp;
+}
+
+template <typename T>
+void pop(Queue<T>* queue) {
+    if (isEmpty(queue)) {
+        std::cout << "Queue is empty" << std::endl;
+        return;
+    }
+    std::cout << "-> " << queue->head->data << std::endl;
+    popSilent(queue);
 }
 
 template <typename T>
@@ -86,7 +93,7 @@ void print(const Queue<T>* queue) {
 template <typename T>
 void clear(Queue<T>* queue) {
     while (!isEmpty(queue)) {
-        pop(queue);
+        popSilent(queue);
     }
 }
 
